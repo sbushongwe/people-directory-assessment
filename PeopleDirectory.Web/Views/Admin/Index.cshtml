@@ -1,0 +1,460 @@
+﻿@model List<PeopleDirectory.Web.Models.AdminPersonViewModel>
+
+@inject Microsoft.Extensions.Options.IOptions<PeopleDirectory.Web.Configuration.ApiSettings> ApiSettings
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #495057;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 10px;
+        min-height: 45px;
+        border: 1px solid #ced4da;
+        box-shadow: none;
+        transition: all 0.2s ease;
+    }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.15rem rgba(13,110,253,.15);
+        }
+
+    .modal-content {
+        border-radius: 20px;
+        border: none;
+    }
+
+    .modal-header {
+        background: #0d6efd;
+        color: white;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+    }
+
+    .btn-primary {
+        border-radius: 10px;
+    }
+
+    .btn-secondary {
+        border-radius: 10px;
+    }
+
+</style>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">
+            People Management
+        </h3>
+
+        <button class="btn btn-primary"
+                onclick="openCreateModal()">
+            <i class="fas fa-plus"></i>
+            Add Person
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>First Name</th>
+                    <th>Surname</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Country</th>
+                    <th>City</th>
+                    <th width="180">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var person in Model)
+                {
+                    <tr>
+                        <td>@person.FirstName</td>
+                        <td>@person.Surname</td>
+                        <td>@person.Email</td>
+                        <td>@person.MobileNumber</td>
+                        <td>@person.Country</td>
+                        <td>@person.City</td>
+                        <td>
+
+                            <button class="btn btn-warning btn-sm"
+                                    onclick="openEditModal(@person.Id)">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm"
+                                    onclick="deletePerson(@person.Id)">
+                                <i class="fas fa-trash"></i>
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade"
+     id="personModal"
+     tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"
+                    id="modalTitle">
+                    Add Person
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        onclick="closeModal()">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden"
+                       id="personId" />
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+                        <label>First Name</label>
+                        <input type="text"
+                               id="firstName"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Surname</label>
+                        <input type="text"
+                               id="surname"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Email</label>
+                        <input type="email"
+                               id="email"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Mobile</label>
+                        <input type="text"
+                               id="mobileNumber"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Gender</label>
+                        <select id="gender"
+                                class="form-select">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Profile Picture URL</label>
+                        <input type="text"
+                               id="profilePictureUrl"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            Country
+                        </label>
+
+                        <select id="countryId"
+                                class="form-select">
+                            <option value="">
+                                Select Country
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            City
+                        </label>
+
+                        <select id="cityId"
+                                class="form-select">
+                            <option value="">
+                                Select City
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        onclick="closeModal()">
+                    Cancel
+                </button>
+
+                <button class="btn btn-primary"
+                        id="saveButton"
+                        onclick="savePerson()">
+
+                    <span id="saveButtonText">
+                        Save
+                    </span>
+
+                    <span id="saveSpinner"
+                          class="spinner-border spinner-border-sm ms-2 d-none"
+                          role="status">
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let personModal;
+
+    const apiBase = "@ApiSettings.Value.BaseUrl";
+
+        async function openCreateModal() {
+
+            clearForm();
+
+            $("#modalTitle").text("Add Person");
+
+            await loadCountriesDropdown();
+
+            personModal = new bootstrap.Modal(
+            document.getElementById('personModal'));
+            personModal.show();
+        }
+
+        async function openEditModal(id) {
+
+            clearForm();
+
+            $("#modalTitle").text("Edit Person");
+
+            await loadCountriesDropdown();
+
+            const response = await fetch(
+                `${apiBase}/people/${id}`);
+
+            const person = await response.json();
+
+            $("#personId").val(person.id);
+            $("#firstName").val(person.firstName);
+            $("#surname").val(person.surname);
+            $("#email").val(person.email);
+            $("#mobileNumber").val(person.mobileNumber);
+            $("#gender").val(person.gender);
+            $("#profilePictureUrl").val(person.profilePictureUrl);
+            $("#countryId").val(person.countryId);
+
+            await loadCitiesDropdown(person.countryId);
+
+            $("#cityId").val(person.cityId);
+
+            personModal = new bootstrap.Modal(
+            document.getElementById('personModal'));
+            personModal.show();
+        }
+
+        async function savePerson() {
+
+            $(".is-invalid").removeClass("is-invalid");
+
+            let isValid = true;
+
+            if (!$("#firstName").val().trim()) {
+                $("#firstName").addClass("is-invalid");
+                isValid = false;
+            }
+
+            if (!$("#surname").val().trim()) {
+                $("#surname").addClass("is-invalid");
+                isValid = false;
+            }
+
+            if (!$("#email").val().trim()) {
+                $("#email").addClass("is-invalid");
+                isValid = false;
+            }
+
+            if (!$("#mobileNumber").val().trim()) {
+                $("#mobileNumber").addClass("is-invalid");
+                isValid = false;
+            }
+
+            if (!$("#countryId").val()) {
+                $("#countryId").addClass("is-invalid");
+                isValid = false;
+            }
+
+            if (!$("#cityId").val()) {
+                $("#cityId").addClass("is-invalid");
+                isValid = false;
+            }
+
+            if (!isValid) {
+                alert("Please complete all required fields.");
+                return;
+            }
+
+            $("#saveButton").prop("disabled", true);
+            $("#saveButtonText").text("Saving...");
+            $("#saveSpinner").removeClass("d-none");
+
+            const id = $("#personId").val();
+
+            const person = {
+                id: id,
+                firstName: $("#firstName").val(),
+                surname: $("#surname").val(),
+                email: $("#email").val(),
+                mobileNumber: $("#mobileNumber").val(),
+                gender: $("#gender").val(),
+                profilePictureUrl: $("#profilePictureUrl").val(),
+                countryId: parseInt($("#countryId").val()),
+                cityId: parseInt($("#cityId").val())
+            };
+
+            let method = "POST";
+
+            if (id) {
+                method = "PUT";
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/people`, {
+                    method: method,
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(person)
+                });
+
+                if (response.ok) {
+                    closeModal();
+                    location.reload();
+                }
+                else {
+                    $("#saveButton").prop("disabled", false);
+                    $("#saveButtonText").text("Save");
+                    $("#saveSpinner").addClass("d-none");
+                    alert("An error occurred while saving.");
+                }
+            }
+            catch {
+
+                $("#saveButton").prop("disabled", false);
+                $("#saveButtonText").text("Save");
+                $("#saveSpinner").addClass("d-none");
+                alert("An unexpected error occurred.");
+            }
+        }
+
+        async function loadCountriesDropdown() {
+
+            $("#countryId").html("");
+
+            const response = await fetch(
+                `${apiBase}/countries`);
+
+            const countries = await response.json();
+
+            countries.forEach(country => {
+                $("#countryId").append(`
+                    <option value="${country.id}">
+                        ${country.name}
+                    </option>
+                `);
+            });
+
+            await loadCitiesDropdown($("#countryId").val());
+        }
+
+        async function loadCitiesDropdown(countryId) {
+            $("#cityId").html("");
+
+            const response = await fetch(
+                `${apiBase}/cities/by-country/${countryId}`);
+
+            const cities = await response.json();
+
+            cities.forEach(city => {
+
+                $("#cityId").append(`
+                    <option value="${city.id}">
+                        ${city.name}
+                    </option>
+                `);
+            });
+        }
+
+        $("#countryId").on("change", function () {
+
+            loadCitiesDropdown($(this).val());
+        });
+
+        function clearForm() {
+            $("#personId").val("");
+            $("#firstName").val("");
+            $("#surname").val("");
+            $("#email").val("");
+            $("#mobileNumber").val("");
+            $("#gender").val("");
+            $("#profilePictureUrl").val("");
+        }
+
+        function closeModal() {
+            if (personModal) {
+
+                personModal.hide();
+            }
+        }
+
+        async function deletePerson(id) {
+        const confirmed = confirm(
+            "Are you sure you want to delete this person?");
+
+        if (!confirmed)
+            return;
+
+        try {
+            const response = await fetch(
+                `${apiBase}/people/${id}`,
+                {
+                    method: "DELETE"
+                });
+
+            if (response.ok) {
+                location.reload();
+            }
+            else {
+                alert("Failed to delete person.");
+            }
+        }
+        catch {
+            alert("An unexpected error occurred.");
+        }
+    }
+</script>

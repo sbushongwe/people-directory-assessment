@@ -1,0 +1,362 @@
+﻿@inject Microsoft.Extensions.Options.IOptions<PeopleDirectory.Web.Configuration.ApiSettings> ApiSettings
+
+@{
+    ViewData["Title"] = "People Directory";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+<style>
+
+    body {
+        background-color: #f4f6f9;
+    }
+
+    .hero-section {
+        background: linear-gradient(135deg, #0d6efd, #4f8dfd);
+        color: white;
+        padding: 60px 20px;
+        border-radius: 20px;
+        margin-bottom: 40px;
+        text-align: center;
+    }
+
+    .search-card {
+        background: white;
+        padding: 25px;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        margin-top: -40px;
+        position: relative;
+        z-index: 10;
+    }
+
+    .person-card {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+        .person-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+    .person-avatar {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #777;
+        margin-top: 40px;
+    }
+
+</style>
+
+<div class="container mt-4">
+    <div class="hero-section">
+        <h1 class="display-5 fw-bold">
+            People Directory
+        </h1>
+        <p class="lead">
+            Search and discover people instantly
+        </p>
+    </div>
+
+    <div class="search-card">
+        <div class="row g-3">
+            <div class="col-md-5 position-relative">
+                <input type="text"
+                       id="searchInput"
+                       class="form-control form-control-lg"
+                       placeholder="Search by Firstname or Surname..." />
+                <div id="searchSuggestions"
+                     class="list-group position-absolute w-100 shadow"
+                     style="z-index:1000;">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <select id="countryFilter"
+                        class="form-select form-select-lg">
+                    <option value="">
+                        All Countries
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select id="cityFilter"
+                        class="form-select form-select-lg">
+                    <option value="">
+                        All Cities
+                    </option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4"
+         id="resultsContainer">
+    </div>
+
+
+    <div id="emptyState"
+         class="empty-state d-none">
+        <h4>No people found</h4>
+        <p>Try adjusting your search filters.</p>
+    </div>
+</div>
+
+
+<div class="modal fade"
+     id="personModal"
+     tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    Person Details
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <img id="profileImage"
+                             src=""
+                             class="img-fluid rounded-circle shadow"
+                             style="width:220px;height:220px;object-fit:cover;" />
+                    </div>
+
+                    <div class="col-md-8">
+                        <table class="table table-striped">
+                            <tr>
+                                <th>First Name</th>
+                                <td id="detailFirstName"></td>
+                            </tr>
+                            <tr>
+                                <th>Surname</th>
+                                <td id="detailSurname"></td>
+                            </tr>
+                            <tr>
+                                <th>Email</th>
+                                <td id="detailEmail"></td>
+                            </tr>
+                            <tr>
+                                <th>Mobile</th>
+                                <td id="detailMobile"></td>
+                            </tr>
+                            <tr>
+                                <th>Gender</th>
+                                <td id="detailGender"></td>
+                            </tr>
+                            <tr>
+                                <th>Country</th>
+                                <td id="detailCountry"></td>
+                            </tr>
+                            <tr>
+                                <th>City</th>
+                                <td id="detailCity"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+
+    const apiBase = "@ApiSettings.Value.BaseUrl";
+
+    loadCountries();
+    performSearch();
+    let searchTimeout;
+
+    $("#searchInput").on("keyup", async function () {
+    clearTimeout(searchTimeout);
+    const term = $(this).val();
+    searchTimeout = setTimeout(async () => {
+    performSearch();
+    if (!term) {
+    $("#searchSuggestions").html("");
+    return;
+    }
+
+    const response = await fetch(
+    `${apiBase}/people/suggestions?term=${term}`);
+
+    const suggestions = await response.json();
+
+    let html = "";
+
+    suggestions.forEach(item => {
+
+    html += `
+    <a href="#"
+    class="list-group-item list-group-item-action"
+    onclick="selectSuggestion('${item}')">
+    ${item}
+    </a>
+    `;
+    });
+
+    $("#searchSuggestions").html(html);
+
+    }, 300);
+    });
+
+    function selectSuggestion(value) {
+    $("#searchInput").val(value);
+    $("#searchSuggestions").html("");
+    performSearch();
+    }
+
+    $(document).click(function (e) {
+    if (!$(e.target).closest('#searchInput').length) {
+    $("#searchSuggestions").html("");
+    }
+    });
+
+    $("#countryFilter").on("change", function () {
+    loadCities($(this).val());
+    performSearch();
+    });
+
+    $("#cityFilter").on("change", function () {
+    performSearch();
+    });
+
+    async function performSearch() {
+
+    const term = $("#searchInput").val();
+    const countryId = $("#countryFilter").val();
+    const cityId = $("#cityFilter").val();
+    const response = await fetch(
+    `${apiBase}/people/search?term=${term}&countryId=${countryId}&cityId=${cityId}`);
+
+    const data = await response.json();
+
+    let cards = "";
+
+    if (data.length === 0) {
+    $("#resultsContainer").html("");
+    $("#emptyState").removeClass("d-none");
+    return;
+    }
+
+    $("#emptyState").addClass("d-none");
+
+    data.forEach(person => {
+    const avatar =
+    `https://ui-avatars.com/api/?name=${person.fullName}`;
+
+    cards += `
+    <div class="col-md-4 mb-4">
+    <div class="card person-card h-100"
+    onclick="loadPersonDetails(${person.id})">
+    <div class="card-body text-center">
+    <img src="${avatar}"
+    class="person-avatar mb-3" />
+    <h5 class="card-title">
+    ${person.fullName}
+    </h5>
+
+    <p class="text-muted mb-1">
+    ${person.country}, ${person.city}
+    </p>
+    <p class="mb-1">
+    ${person.email}
+    </p>
+    <small class="text-muted">
+    ${person.mobileNumber}
+    </small>
+    </div>
+    </div>
+    </div>
+    `;
+    });
+
+    $("#resultsContainer").html(cards);
+    }
+
+    async function loadCountries() {
+
+    const response = await fetch(
+    `${apiBase}/countries`);
+
+    const countries = await response.json();
+
+    countries.forEach(country => {
+
+    $("#countryFilter").append(`
+    <option value="${country.id}">
+    ${country.name}
+    </option>
+    `);
+    });
+    }
+
+    async function loadCities(countryId) {
+
+    $("#cityFilter").html(
+    '<option value="">All Cities</option>');
+
+    if (!countryId)
+    return;
+
+    const response = await fetch(
+    `${apiBase}/cities/by-country/${countryId}`);
+
+    const cities = await response.json();
+
+    cities.forEach(city => {
+
+    $("#cityFilter").append(`
+    <option value="${city.id}">
+    ${city.name}
+    </option>
+    `);
+    });
+    }
+
+    async function loadPersonDetails(id) {
+
+    const response = await fetch(
+    `${apiBase}/people/${id}`);
+
+    const person = await response.json();
+
+    $("#detailFirstName").text(person.firstName);
+    $("#detailSurname").text(person.surname);
+    $("#detailEmail").text(person.email);
+    $("#detailMobile").text(person.mobileNumber);
+    $("#detailGender").text(person.gender);
+    $("#detailCountry").text(person.country);
+    $("#detailCity").text(person.city);
+    $("#profileImage").attr(
+    "src",
+    person.profilePictureUrl ||
+    `https://ui-avatars.com/api/?name=${person.firstName}+${person.surname}&size=250`);
+
+    const modal = new bootstrap.Modal(
+    document.getElementById('personModal'));
+    modal.show();
+    }
+
+</script>

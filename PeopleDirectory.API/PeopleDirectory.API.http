@@ -1,0 +1,6 @@
+@PeopleDirectory.API_HostAddress = http://localhost:5267
+
+GET {{PeopleDirectory.API_HostAddress}}/
+Accept: application/json
+
+###

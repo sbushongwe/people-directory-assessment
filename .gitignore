@@ -1,0 +1,27 @@
+## Build folders
+bin/
+obj/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+
+## Rider
+.idea/
+
+## Logs
+*.log
+
+## Publish folders
+publish/
+
+## Node modules
+node_modules/
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Secrets
+appsettings.Development.json

@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <title>People Directory Admin</title>
+    <link rel="stylesheet"
+          href="~/adminlte/plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet"
+          href="~/adminlte/dist/css/adminlte.min.css">
+</head>
+
+<body class="hold-transition sidebar-mini">
+    <div class="wrapper">
+        <!-- Navbar -->
+        <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link"
+                           data-widget="pushmenu"
+                           href="#">
+                        <i class="fas fa-bars"></i>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a asp-controller="Account"
+                           asp-action="Logout"
+                           class="nav-link">
+                        Logout
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Sidebar -->
+        <aside class="main-sidebar sidebar-dark-primary elevation-4">
+            <a href="#"
+                   class="brand-link">
+                <span class="brand-text font-weight-light">
+                    People Directory
+                </span>
+            </a>
+
+            <div class="sidebar">
+                <nav class="mt-2">
+                    <ul class="nav nav-pills nav-sidebar flex-column"
+                        data-widget="treeview"
+                        role="menu">
+                        <li class="nav-item">
+                            <a asp-controller="Admin"
+                                   asp-action="Index"
+                                   class="nav-link">
+                                <i class="nav-icon fas fa-users"></i>
+                                <p>People</p>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Content -->
+
+        <div class="content-wrapper">
+            <section class="content pt-4">
+                <div class="container-fluid">
+                    @RenderBody()
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="~/adminlte/plugins/jquery/jquery.min.js"></script>
+    <script src="~/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/adminlte/dist/js/adminlte.min.js"></script>
+</body>
+</html>
